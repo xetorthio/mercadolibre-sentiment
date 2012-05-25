@@ -1,0 +1,13 @@
+{
+    "name": "tweetlyze", 
+    "version": "1.0.0", 
+    "private": true, 
+    "dependencies": {
+        "express": "2.5.x",
+        "jade": "0.26.x",
+        "twit": "0.1.x",
+        "natural": "0.1.x",
+        "socket.io": "0.9.x"
+    },
+    "engine": "node ~> 0.6.x"
+}

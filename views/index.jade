@@ -1,0 +1,116 @@
+!!! 5
+head
+  link(rel="stylesheet", href="http://code.jquery.com/ui/1.8.20/themes/base/jquery-ui.css", type="text/css")
+  link(rel="stylesheet", href="http://static.jquery.com/ui/css/base.css", type="text/css")
+  style
+    body {
+      font-size: 8px;
+    }
+body
+  div#container(style="min-width: 400px; height: 400px; margin: 0 auto"
+  div#dialog
+    p#tweet
+  div#negative
+    p#text
+  script(src="/socket.io/socket.io.js")
+  script(src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js")
+  script(src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.18/jquery-ui.min.js")
+  script(src="http://code.highcharts.com/highcharts.js")
+  script(src="http://code.highcharts.com/modules/exporting.js")
+  script
+    $(document).ready(function() {
+      Highcharts.setOptions({
+        global: {
+          useUTC: false
+        }
+      });
+      var chart;
+      var initialN = [];
+      var initialT = [];
+      var time = (new Date()).getTime()-10*1000;
+      for(var n=0; n<10; n++) {
+        initialN.push({x:time+n*1000, y:0});
+        initialT.push({x:time+n*1000, y:0});
+      }
+      chart = new Highcharts.Chart({
+        colors: ['red', 'blue'],
+        chart: {
+          renderTo: 'container',
+          type: 'spline',
+          marginRight: 10,
+          events: {
+          }
+        },
+        title: {
+          text: 'Opinions'
+        },
+        xAxis: {
+          type: 'datetime',
+          tickPixelInterval: 150
+        },
+        yAxis: {
+          min: 0,
+          minRange: 1,
+          title: {
+            text: 'Opinions'
+          },
+          plotLines: [{
+            value: 0,
+            width: 1,
+            color: '#808080'
+          }]
+        },
+        tooltip: {
+          formatter: function() {
+            return '<b>' + this.series.name + '</b><br/>'+
+
+                    Highcharts.dateFormat('%Y-%m-%d %H:%M:%S', this.x) +'<br/>'+
+
+                    Highcharts.numberFormat(this.y, 2);
+          }
+        },
+        legend: {
+          enabled: false
+        },
+        exporting: {
+          enabled: false
+        },
+        series: [{name: 'Negative Opinions', data:initialN},{name: 'Total Opinions', data:initialT}]
+      });
+      var socket = io.connect('/');
+      var negative = chart.series[0];
+      var total = chart.series[1];
+      socket.on('connect', function () {
+          socket.on('tweets', function(tweet) {
+            $('#tweet').text(tweet.text).dialog({
+              resizable: false,
+              height:140,
+              modal: false,
+              position: ['left', 'bottom'],
+              buttons: {
+                "Negative": function() {
+                  $(this).dialog("close");
+                  socket.emit('classify negative', tweet);
+                },
+                "Other": function() {
+                  $(this).dialog("close");
+                  socket.emit('classify other', tweet);
+                },
+                "Don't bother": function() {
+                  $(this).dialog("close");
+                  socket.emit('dont ask');
+                }
+              }
+            });
+          });
+          socket.on('negative', function (data) {
+            $('#negative').text(data.text).dialog({ position: ['right', 'bottom'] });
+          });
+          socket.on('data', function (data) {
+            console.log(data);
+            var x = (new Date()).getTime();
+            negative.addPoint([x, data.negative], true, true);
+            total.addPoint([x, data.total], true, true);
+          });
+      });
+    });
